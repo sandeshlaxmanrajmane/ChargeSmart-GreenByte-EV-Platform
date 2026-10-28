@@ -88,7 +88,8 @@ class APIService {
   async checkBackendHealth(): Promise<boolean> {
     try {
       const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(2000) });
-      if (res.ok) {
+      const isJson = res.headers.get('content-type')?.includes('application/json');
+      if (res.ok && isJson) {
         this.isBackendOnline = true;
         this.backendCheckDone = true;
         return true;
@@ -108,7 +109,8 @@ class APIService {
   async getLiveGridTelemetry(): Promise<LiveGridTelemetry> {
     try {
       const res = await fetch(`${API_BASE}/grid/live`, { signal: AbortSignal.timeout(3000) });
-      if (res.ok) {
+      const isJson = res.headers.get('content-type')?.includes('application/json');
+      if (res.ok && isJson) {
         this.isBackendOnline = true;
         return await res.json();
       }
@@ -149,7 +151,8 @@ class APIService {
         body: JSON.stringify({ message, context }),
         signal: AbortSignal.timeout(5000),
       });
-      if (res.ok) {
+      const isJson = res.headers.get('content-type')?.includes('application/json');
+      if (res.ok && isJson) {
         return await res.json();
       }
     } catch (e) {
@@ -207,7 +210,8 @@ class APIService {
         body: JSON.stringify(inputs),
         signal: AbortSignal.timeout(5000),
       });
-      if (res.ok) {
+      const isJson = res.headers.get('content-type')?.includes('application/json');
+      if (res.ok && isJson) {
         return await res.json();
       }
     } catch {
@@ -280,7 +284,8 @@ class APIService {
         body: JSON.stringify(params),
         signal: AbortSignal.timeout(5000),
       });
-      if (res.ok) {
+      const isJson = res.headers.get('content-type')?.includes('application/json');
+      if (res.ok && isJson) {
         return await res.json();
       }
     } catch {
@@ -328,7 +333,8 @@ class APIService {
   async fetchSQLitePlans(): Promise<any[]> {
     try {
       const res = await fetch(`${API_BASE}/plans`, { signal: AbortSignal.timeout(3000) });
-      if (res.ok) {
+      const isJson = res.headers.get('content-type')?.includes('application/json');
+      if (res.ok && isJson) {
         const data = await res.json();
         return data.plans || [];
       }
