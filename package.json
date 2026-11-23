@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "node --experimental-strip-types --test tests/recommendationEngine.test.mjs"
+    "test": "node --experimental-strip-types --test tests/recommendationEngine.test.mjs tests/journeyAndRouting.test.mjs tests/ownerSystem.test.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.3",

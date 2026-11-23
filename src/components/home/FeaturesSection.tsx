@@ -43,6 +43,13 @@ export const FeaturesSection: React.FC<{ setActiveTab: (tab: string) => void }> 
       tab: 'stations',
     },
     {
+      icon: Sparkles,
+      title: 'EV Journey Corridor Planner',
+      desc: 'Plot long-distance routes with OSRM, detect if battery range needs charging stops, and locate high-speed charging hubs along the highway corridor.',
+      tag: 'OSRM Route Engine',
+      tab: 'journey',
+    },
+    {
       icon: Leaf,
       title: 'Lifecycle Emissions Engine',
       desc: 'Rigorous calculation using ISO lifecycle factors (0.04 kg CO₂e/kWh for solar/wind) versus real-time grid carbon intensity.',

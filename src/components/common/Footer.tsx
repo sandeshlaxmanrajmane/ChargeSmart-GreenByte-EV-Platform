@@ -38,26 +38,34 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab }) => {
             <ul className="space-y-2 text-xs">
               <li>
                 <button
-                  onClick={() => setActiveTab('planner')}
-                  className="hover:text-emerald-400 transition-colors"
-                >
-                  Smart Charge Planner
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => setActiveTab('dashboard')}
-                  className="hover:text-emerald-400 transition-colors"
-                >
-                  Live Charging Dashboard
-                </button>
-              </li>
-              <li>
-                <button
                   onClick={() => setActiveTab('stations')}
                   className="hover:text-emerald-400 transition-colors"
                 >
-                  EV Station Finder
+                  Find Charging Stations
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => setActiveTab('planner')}
+                  className="hover:text-emerald-400 transition-colors"
+                >
+                  Smart Charging Planner
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => setActiveTab('journey')}
+                  className="hover:text-emerald-400 transition-colors"
+                >
+                  Journey Planner
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => setActiveTab('saved-plans')}
+                  className="hover:text-emerald-400 transition-colors"
+                >
+                  Saved Charging Plans
                 </button>
               </li>
               <li>
@@ -74,6 +82,14 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab }) => {
                   className="hover:text-emerald-400 transition-colors"
                 >
                   CO₂e Emissions Engine
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => setActiveTab('analytics')}
+                  className="hover:text-emerald-400 transition-colors"
+                >
+                  Fleet & Grid Analytics
                 </button>
               </li>
             </ul>

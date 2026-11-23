@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BatteryCharging, Sun, Zap, Clock, ShieldCheck, Play, Pause } from 'lucide-react';
+import { BatteryCell3D } from '../3d/BatteryCell3D';
 import { showToast } from '../common/Toast';
 
 export const ActiveSessionWidget: React.FC<{ currencySymbol: string }> = ({
@@ -37,9 +38,9 @@ export const ActiveSessionWidget: React.FC<{ currencySymbol: string }> = ({
       {/* Background ambient lighting */}
       <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        {/* Left Side: Session Details */}
-        <div className="space-y-4 max-w-lg">
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        {/* Left Side: Session Details (7 cols) */}
+        <div className="lg:col-span-7 space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold">
               <span className="relative flex h-2 w-2">
@@ -57,7 +58,7 @@ export const ActiveSessionWidget: React.FC<{ currencySymbol: string }> = ({
             <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               Solar Peak Absorption Window
             </h3>
-            <p className="text-xs sm:text-sm text-slate-300 mt-1">
+            <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
               Currently drawing from on-site rooftop solar canopy at GreenByte Innovation Hub.
             </p>
           </div>
@@ -85,45 +86,12 @@ export const ActiveSessionWidget: React.FC<{ currencySymbol: string }> = ({
               <div className="text-lg font-bold text-white mt-0.5 font-mono">1:15 PM</div>
             </div>
           </div>
-        </div>
 
-        {/* Right Side: Battery Gauge & Controls */}
-        <div className="w-full lg:w-72 bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/15 flex flex-col items-center">
-          <div className="relative w-28 h-28 flex items-center justify-center mb-3">
-            {/* SVG Circular Progress */}
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-              <circle
-                cx="50"
-                cy="50"
-                r="40"
-                className="stroke-white/20 fill-none"
-                strokeWidth="8"
-              />
-              <circle
-                cx="50"
-                cy="50"
-                r="40"
-                className="stroke-emerald-400 fill-none transition-all duration-500 ease-out"
-                strokeWidth="8"
-                strokeDasharray="251.2"
-                strokeDashoffset={251.2 - (251.2 * chargingPercent) / 100}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <BatteryCharging className="w-6 h-6 text-emerald-300 animate-pulse" />
-              <span className="text-xl font-black font-mono mt-0.5">{chargingPercent}%</span>
-            </div>
-          </div>
-
-          <div className="w-full text-center space-y-2">
-            <div className="text-xs text-slate-300 font-medium">
-              Target: <span className="font-bold text-white">90%</span> (~8.9 kWh remaining)
-            </div>
-
+          {/* Controls button */}
+          <div className="pt-2">
             <button
               onClick={toggleCharging}
-              className={`w-full py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+              className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                 isCharging
                   ? 'bg-white/15 hover:bg-white/25 text-white border border-white/20'
                   : 'bg-emerald-500 hover:bg-emerald-400 text-forest-dark font-extrabold shadow-md'
@@ -131,15 +99,25 @@ export const ActiveSessionWidget: React.FC<{ currencySymbol: string }> = ({
             >
               {isCharging ? (
                 <>
-                  <Pause className="w-3.5 h-3.5" /> Pause Session
+                  <Pause className="w-4 h-4" /> Pause Charging Session
                 </>
               ) : (
                 <>
-                  <Play className="w-3.5 h-3.5" /> Resume Solar Charging
+                  <Play className="w-4 h-4" /> Resume Smart Charging
                 </>
               )}
             </button>
           </div>
+        </div>
+
+        {/* Right Side: 3D Battery Cell Module (5 cols) */}
+        <div className="lg:col-span-5">
+          <BatteryCell3D
+            currentSoc={Math.round(chargingPercent)}
+            targetSoc={90}
+            capacityKwh={40.5}
+            isCharging={isCharging}
+          />
         </div>
       </div>
     </div>

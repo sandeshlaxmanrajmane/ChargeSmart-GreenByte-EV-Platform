@@ -37,9 +37,16 @@ import {
 interface PlannerFormProps {
   currency: string;
   currencySymbol: string;
+  initialStation?: any;
+  initialPlan?: any;
 }
 
-export const PlannerForm: React.FC<PlannerFormProps> = ({ currency, currencySymbol }) => {
+export const PlannerForm: React.FC<PlannerFormProps> = ({
+  currency,
+  currencySymbol,
+  initialStation,
+  initialPlan,
+}) => {
   // Preset or custom vehicle selection
   const [selectedPresetId, setSelectedPresetId] = useState<string>('car-nexon');
 
@@ -55,6 +62,32 @@ export const PlannerForm: React.FC<PlannerFormProps> = ({ currency, currencySymb
   const [priority, setPriority] = useState<ChargingPriority>('balanced');
   const [planningHorizonHours, setPlanningHorizonHours] = useState<number>(24);
   const [efficiencyPercent, setEfficiencyPercent] = useState<number>(90);
+
+  // Apply initial station if transferred from Station Finder
+  useEffect(() => {
+    if (initialStation) {
+      setPreferredLocation('public');
+      setMaxChargingPowerKw(initialStation.maxPowerKw);
+      setNearestDetectedStation({
+        name: initialStation.name,
+        distanceKm: initialStation.distanceKm,
+        maxPowerKw: initialStation.maxPowerKw,
+        greenShare: initialStation.renewableInfo.greenSharePercent,
+      });
+    }
+  }, [initialStation]);
+
+  // Apply initial plan if recalculating from Saved Plans
+  useEffect(() => {
+    if (initialPlan) {
+      setVehicleName(initialPlan.vehicleName);
+      setVehicleType(initialPlan.vehicleType);
+      setPriority(initialPlan.priority);
+      if (initialPlan.energyKwh) {
+        setBatteryCapacityKwh(Math.max(10, Math.round(initialPlan.energyKwh * 1.5)));
+      }
+    }
+  }, [initialPlan]);
 
   // Departure deadline default: 12 hours from now formatted as local datetime
   const [departureDeadline, setDepartureDeadline] = useState<string>(() => {

@@ -1,192 +1,207 @@
-# ChargeSmart — GreenByte's Intelligent EV Charging Platform
+# ChargeSmart — Smart EV Charging & Renewable Energy Optimization
 
 > **"Smarter Charging. A Cleaner Tomorrow."**  
-> Developed by **GreenByte** for **DSU Ideathon 2026** under the domain **Clean Mobility & EV Infrastructure**.
+> Complete full-stack web application for EV drivers and charging station operators.
 
 ---
 
 ## 1. Project Vision & Executive Summary
 
-Electric vehicles (EVs) are only as clean as the electricity used to charge them. When EV drivers plug in during peak evening hours (6:00 PM – 9:30 PM), power grids are forced to spin up carbon-intensive coal and natural gas peaker plants, driving electricity tariffs up to 3.2x higher and emitting over 0.78 kg CO₂e per kWh.
+Electric vehicles (EVs) are only as clean as the electricity used to charge them. When EV drivers plug in unmanaged during evening peak hours (6:00 PM – 9:30 PM), electrical grids fire up carbon-intensive coal and natural gas peaker plants. This drives electricity costs up by 3.2× and elevates carbon intensity to over 0.78 kg CO₂e per kWh.
 
-**ChargeSmart** is an intelligent, renewable-energy-aware EV charging platform that transforms charging from an unmanaged load into a flexible clean-energy consumer. ChargeSmart answers three critical questions for EV users and fleet managers:
+**ChargeSmart** is a production-grade, real-time, renewable-energy-aware EV charging web application featuring two unified experiences:
 
-1. **When should I charge my EV?**
-2. **Which available charging window best fits my vehicle needs, departure deadline, and budget?**
-3. **How does my charging decision measurably reduce financial cost and greenhouse gas emissions?**
+1. **Public EV User Platform (100% Zero Login Required)**:
+   - Real-time GPS location discovery & OpenStreetMap Nominatim search.
+   - Interactive Leaflet map with real EV stations, verified connector types, and driving directions.
+   - Transparent charging availability status: distinguishing verified live operator feeds, operator-reported status, and unprovided feeds.
+   - Smart charging scheduler with multi-objective Pareto optimization (cost, green energy, battery longevity, departure deadline).
+   - Multi-stop highway journey corridor planner with road-network routing (OSRM).
+   - ISO-14044 aligned life-cycle environmental impact and charging cost calculators.
+   - Local plan management stored securely in browser `localStorage`.
+
+2. **EV Station Owner Portal (Secure Authentication & Real-Time Control)**:
+   - Station operator registration and login with cryptographically secure PBKDF2 password hashing and session tokens.
+   - Station creation with GPS geocoding, address lookup, operating hours, and driver amenities.
+   - Multi-bay charger hardware registration (CCS2, Type 2, CHAdeMO, GB/T, Bharat AC001) with power ratings (kW) and tariffs ($/kWh).
+   - Real-time charger availability control board: instant one-click status transitions (`Available`, `Occupied`, `Maintenance`, `Out of Service`, `Offline`) with automated timestamp auditing.
+   - Full SQLite 3 persistence with cascade foreign keys.
+   - Instant synchronization with the public discovery map and station detail cards!
 
 ---
 
-## 2. Technology Stack
+## 2. Full Technology Stack
 
-- **Frontend Framework**: React 18 with TypeScript 5
-- **Build Tool & Bundler**: Vite 5
-- **Styling**: Tailwind CSS 3 (custom eco-tech palette: Emerald, Forest, Mint, Solar Gold, Wind Sky)
-- **Data Visualizations & Charts**: Recharts 2 (Interactive AreaCharts, ComposedCharts, BarCharts)
-- **Interactive Mapping**: Leaflet 1.9 with OpenStreetMap tiles & custom SVG eco-markers
+- **Frontend**: React 18 with TypeScript 5, Vite 5
+- **Styling**: Tailwind CSS 3 (Custom eco-tech palette: Forest `#064E3B`, Emerald `#10B981`, Mint `#F4FBF7`, Solar Amber, Wind Sky)
+- **Animations**: Framer Motion & CSS keyframe transitions + 3D Holographic EV Digital Twin Canvas
 - **Icons**: Lucide React
-- **Local Persistence & Service Layer**: HTML5 `localStorage` with reactive cross-tab event listeners and JSON plan export
-- **Test Suite**: Node.js built-in native test runner (`node --test` with `--experimental-strip-types`)
+- **Data Visualizations & Charts**: Recharts 2 (Interactive AreaCharts, ComposedCharts, BarCharts, PieCharts)
+- **Interactive Mapping**: Leaflet 1.9 with OpenStreetMap tiles & custom SVG eco-markers
+- **Geocoding & Location**: Browser Geolocation API & OpenStreetMap Nominatim Search API
+- **Charging Station Data**: Verified SQLite Owner Database + OpenStreetMap Overpass API (Real-world charging nodes)
+- **Highway Route Engine**: OSRM (Open Source Routing Machine) driving API
+- **Renewable Solar & Wind Telemetry**: Open-Meteo Physical Radiation API + GreenByte Solar/Wind Physics Engine
+- **Backend**: Python 3.11 with Threaded HTTP/REST server, SQLite 3 database persistence
+- **Security**: PBKDF2-HMAC-SHA256 password hashing with unique salt, bearer token session authorization
+- **Testing**: Node.js native test runner (`node --test`) and Python unit tests
 
 ---
 
-## 3. Project Structure
+## 3. Core Modules & Architecture
 
-```
-chargesmart/
-├── dist/                             # Optimized production build artifacts
-├── src/
-│   ├── components/
-│   │   ├── common/
-│   │   │   ├── BrandLogo.tsx         # GreenByte leaf-and-bolt brand mark
-│   │   │   ├── Navbar.tsx            # Responsive navigation & currency switcher
-│   │   │   ├── Footer.tsx            # Transparent credits & Ideathon notes
-│   │   │   ├── StatusBadge.tsx       # Renewable %, Priority, and Status badges
-│   │   │   └── Toast.tsx             # Toast notification system
-│   │   ├── home/
-│   │   │   ├── HeroSection.tsx       # Animated hero with EV charging showcase
-│   │   │   ├── InteractiveEnergySlider.tsx # Live 24h solar/wind/tariff synchronizer
-│   │   │   ├── HowItWorksSection.tsx # 4-step transparent optimization pipeline
-│   │   │   ├── FeaturesSection.tsx   # Core platform capabilities
-│   │   │   └── ImpactMetrics.tsx     # Quantified clean mobility metrics
-│   │   ├── dashboard/
-│   │   │   ├── ActiveSessionWidget.tsx # Real-time battery & solar intake monitor
-│   │   │   ├── EnergyGridChart.tsx   # 24-hour solar, wind, & dynamic tariff chart
-│   │   │   └── RecentPlansWidget.tsx # Saved charging schedules table with actions
-│   │   ├── planner/
-│   │   │   ├── PlannerForm.tsx       # 10-input interactive smart scheduling form
-│   │   │   ├── RecommendationCard.tsx# Detailed recommended window & why chosen
-│   │   │   ├── ComparisonTable.tsx   # Side-by-side trade-off matrix vs baseline
-│   │   │   └── InfeasibleAlternativeModal.tsx # Constraint conflict suggestions
-│   │   ├── stations/
-│   │   │   ├── StationMap.tsx        # Leaflet OpenStreetMap with custom markers
-│   │   │   ├── StationList.tsx       # Station cards with connector power & rates
-│   │   │   ├── StationFilterBar.tsx  # Search, connector chips, & verified filter
-│   │   │   └── StationDetailModal.tsx# Station specs, amenities, & route simulator
-│   │   ├── calculator/
-│   │   │   ├── CostCalculatorView.tsx# Wall-to-battery efficiency & tariff comparison
-│   │   │   └── EcoCalculatorView.tsx # ISO-aligned lifecycle CO₂e calculator
-│   │   ├── analytics/
-│   │   │   └── AnalyticsView.tsx     # Aggregate KPIs & correlation charts
-│   │   └── settings/
-│   │       └── SettingsView.tsx      # Currencies, default vehicle, reset demo data
-│   ├── data/
-│   │   └── mockData.ts               # 48h solar/wind/tariff forecast & EV presets
-│   ├── services/
-│   │   ├── recommendationEngine.ts   # Core multi-objective optimization algorithm
-│   │   ├── calculatorService.ts      # Standalone cost & environmental calculators
-│   │   ├── stationService.ts         # Station filtering, search, & geo queries
-│   │   └── storageService.ts         # Client persistence & JSON receipt exports
-│   ├── types/
-│   │   └── index.ts                  # TypeScript models, inputs, & responses
-│   ├── App.tsx                       # Root routing & tab orchestration
-│   ├── index.css                     # Tailwind directives & custom animations
-│   └── main.tsx                      # Application entry point
-├── tests/
-│   └── recommendationEngine.test.mjs # 11 unit tests covering all required edge cases
-├── package.json
-├── tailwind.config.js
-├── tsconfig.json
-├── vite.config.ts
-└── README.md
-```
+### 1. Real-Time Location System
+- Uses standard browser Geolocation API.
+- Requests GPS permission only when the user explicitly clicks *"Use My Current Location"*.
+- **Manual Location Search & Autocomplete**: Instant search for any city, street, postal code, or landmark globally using OpenStreetMap Nominatim.
+- **Configurable Search Radius**: Toggle search radius dynamically (5 km, 10 km, 25 km, 50 km, 100 km).
+- Distinct visual badges indicate whether coordinates originate from `Live GPS Position` or `Geocoded Search`.
+- Honest error handling for permission denied, timeout, or position unavailable without silent fallback substitutions.
+
+### 2. EV Station Owner Portal & Availability Management
+- **Owner Authentication**: Secure registration, login, profile inspection, and session logout.
+- **Demo Operator Pre-fill**: One-click demo login for instant inspection (`owner@greencharge.com` / `Password123!`).
+- **Station Management**: Add, update, and delete charging stations with address, GPS coordinates, facilities, and public listing toggle.
+- **Charger Bay Hardware Control**: Configure individual charger bays with connector types, charging speed (kW), and pricing.
+- **Real-Time Availability Switcher**: Operators can toggle bays between `Available`, `Occupied`, `Maintenance`, `Out of Service`, and `Offline`.
+- **Audit Log & Analytics**: Full historical log of every status transition with exact timestamps and reason notes.
+
+### 3. Unified Real Station Discovery
+- Queries both verified station owner databases and OpenStreetMap Overpass.
+- Displays station name, actual street address, coordinates, driving distance, operator name, operating hours, and connector types.
+- **Strict Status Labels**:
+  - `Operator Reported (X/Y Available)`: Verified live operator status from registered owners.
+  - `Available (Confirmed by live feed)`
+  - `Occupied (Confirmed by live feed)`
+  - `Out of service (Confirmed by live feed)`
+  - `Live availability not provided by operator`: Displayed whenever live operator feed is not provided; never invents fake availability.
+- Transparent tariff indicators: Verified prices distinguished from unverified / on-site tariffs.
+- One-click navigation in Google Maps and OpenStreetMap.
+
+### 4. Smart Charging Planner & Recommendation Engine
+- Vehicle presets (Tesla Model 3, Tata Nexon EV, Hyundai Ioniq 5, MG ZS EV, Ather 450X) plus Custom EV entry.
+- Multi-objective Pareto scoring across sliding candidate windows:
+  - **Lowest Estimated Cost**: Prioritizes solar soak ($0.10/kWh) and overnight off-peak ($0.12/kWh).
+  - **Maximum Renewable Energy**: Prioritizes peak solar and wind generation (up to 92% clean share).
+  - **Balanced Smart**: Compromise between bill savings and grid decarbonization.
+  - **Fastest / ASAP**: Immediate rapid charging meeting tight departure constraints.
+- Infeasible Constraint Detection: Automatically warns if budget or departure time cannot be met and provides transparent alternative suggestions.
+
+### 5. Highway Journey Corridor Planner
+- Origin and Destination inputs with geocoding search or live GPS.
+- Real road path calculation via OSRM driving API.
+- Vehicle energy consumption model ($E = \text{dist} \times \frac{\text{capacity}}{\text{range}} \times 1.05$).
+- Dynamic range check: Identifies if distance exceeds current safe battery range.
+- Discovers and maps charging hubs along the highway corridor.
+- Add and configure charging stops with arrival SoC, energy needed, charging duration, and estimated stop cost.
+
+### 6. Charging Cost & Environmental LCA Calculator
+- Calculates net battery energy needed, wall energy drawn with conversion efficiency (default 90%), efficiency losses, electricity cost, session fees, and hourly parking fees.
+- ISO-14044 aligned lifecycle assessment comparing smart charging against thermal coal/gas grids and petrol internal combustion engine (ICE) vehicles.
+- Captures embodied lifecycle emissions of clean energy equipment (0.04 kg CO₂e/kWh for solar/wind manufacturing).
+- Real-world equivalencies: kg CO₂e avoided, equivalent trees planted for 10 years, and liters of petrol not burned.
 
 ---
 
-## 4. Key Calculation Formulas & Methodology
+## 4. Database Schema (SQLite 3)
 
-### A. Required Energy & Wall Supply Drawn
-$$E_{\text{battery}} = \text{Capacity (kWh)} \times \frac{\text{Desired \%} - \text{Current \%}}{100}$$
+The persistent database is located at `backend/chargesmart.db`:
 
-$$E_{\text{drawn}} = \frac{E_{\text{battery}}}{\eta_{\text{charging}}}$$
-*(where $\eta_{\text{charging}}$ accounts for thermal dissipation losses during AC-to-DC conversion, default 90% efficiency)*.
-
-### B. Charging Duration & Power Limit
-$$P_{\text{effective}} = \min(P_{\text{vehicle}}, P_{\text{station}})$$
-
-$$t_{\text{duration}} = \frac{E_{\text{drawn}}}{P_{\text{effective}}}$$
-
-### C. Multi-Objective Scoring Matrix
-For candidate sliding windows $[t_{\text{start}}, t_{\text{start}} + t_{\text{duration}}]$ across the planning horizon:
-$$\text{Composite Score} = w_c \cdot S_{\text{cost}} + w_r \cdot S_{\text{renewable}} + w_e \cdot S_{\text{emissions}} + w_u \cdot S_{\text{urgency}}$$
-
-Transparent, configurable weights applied:
-- **Lowest Cost**: $w = (0.70, 0.15, 0.10, 0.05)$
-- **Max Renewable Energy**: $w = (0.15, 0.70, 0.10, 0.05)$
-- **Balanced Smart**: $w = (0.40, 0.35, 0.20, 0.05)$
-- **Urgent / ASAP**: $w = (0.10, 0.10, 0.05, 0.75)$
-
-### D. Environmental Lifecycle Accounting (ISO 14044 Aligned)
-Unlike generic calculators that incorrectly assume renewable power has zero lifecycle emissions:
-$$\text{Emissions (kg CO}_2\text{e)} = \int \left( \text{Share}_{\text{renewable}}(t) \times \text{EF}_{\text{renewable}} + (1 - \text{Share}_{\text{renewable}}(t)) \times \text{EF}_{\text{grid}}(t) \right) \cdot P_{\text{drawn}} \, dt$$
-- $\text{EF}_{\text{renewable}} = 0.040 \text{ kg CO}_2\text{e/kWh}$ (photovoltaic panel and turbine manufacturing lifecycle embodied footprint).
-- $\text{EF}_{\text{grid}} = 0.65 - 0.82 \text{ kg CO}_2\text{e/kWh}$ (time-varying thermal coal/gas generation mix).
+1. `station_owners`: Station operator accounts (`id`, `full_name`, `email`, `phone`, `business_name`, `password_hash`, `password_salt`, `business_address`, `created_at`).
+2. `owner_sessions`: Cryptographically generated session tokens with 30-day expiration (`token`, `owner_id`, `created_at`, `expires_at`).
+3. `stations`: Charging stations registered by operators (`id`, `owner_id`, `name`, `description`, `address`, `city`, `state`, `postal_code`, `country`, `latitude`, `longitude`, `operating_hours`, `facilities`, `contact_phone`, `contact_email`, `network_operator`, `is_public`, `created_at`, `updated_at`).
+4. `chargers`: Individual charger bays at stations (`id`, `station_id`, `charger_identifier`, `connector_type`, `charging_type`, `power_kw`, `total_connectors`, `price_per_kwh`, `currency`, `additional_fees`, `availability_status`, `operating_status`, `last_status_updated`).
+5. `availability_logs`: Audit trail of status transitions (`id`, `charger_id`, `station_id`, `old_status`, `new_status`, `updated_at`, `notes`).
+6. `saved_plans`: User charging itineraries saved locally and synchronized.
+7. `telemetry_logs`: Historical solar, wind, demand, tariff, and grid carbon logs.
 
 ---
 
-## 5. Setup & Run Instructions
+## 5. API Endpoints (Python Backend)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/health` | System health, active data providers, ML versions, DB status |
+| `POST` | `/api/auth/register` | Station owner registration with PBKDF2 password hashing |
+| `POST` | `/api/auth/login` | Station owner login & session token generation |
+| `GET` | `/api/auth/me` | Authenticated owner profile inspection |
+| `POST` | `/api/auth/logout` | Session token revocation |
+| `GET` | `/api/owner/stations` | Retrieves all stations and chargers for authenticated owner |
+| `POST` | `/api/owner/stations` | Creates a new charging station |
+| `PUT` | `/api/owner/stations/{id}` | Updates charging station information |
+| `DELETE` | `/api/owner/stations/{id}` | Deletes charging station and child chargers |
+| `POST` | `/api/owner/stations/{id}/chargers` | Registers a charger bay at a station |
+| `PUT` | `/api/owner/chargers/{id}` | Updates charger hardware details, power, or pricing |
+| `POST` | `/api/owner/chargers/{id}/status` | Instant charger availability toggle with audit logging |
+| `DELETE` | `/api/owner/chargers/{id}` | Deletes charger bay |
+| `GET` | `/api/owner/analytics` | Owner KPI analytics, utilization rate, and audit activity |
+| `GET` | `/api/stations/nearby?lat={lat}&lon={lon}&radius={m}` | Unified real station discovery (Verified Owners + OSM) |
+| `GET` | `/api/geocode/search?q={query}` | Geocodes cities, addresses, and PIN codes via Nominatim |
+| `GET` | `/api/route?startLat={}&startLon={}&destLat={}&destLon={}` | OSRM road driving distance, duration, and coordinates |
+| `GET` | `/api/grid/live?lat={lat}&lon={lon}` | Real-time Open-Meteo physical solar/wind radiation telemetry |
+| `GET` | `/api/grid/forecast?hours={12-48}` | 48-hour hourly clean energy, tariff, and carbon forecast |
+| `GET` | `/api/plans` | Retrieves saved charging plans from SQLite 3 database |
+| `POST` | `/api/plans` | Saves a new plan to SQLite 3 |
+| `PUT` | `/api/plans/{id}` | Updates plan status or notes in SQLite 3 |
+| `DELETE` | `/api/plans/{id}` | Deletes a plan from SQLite 3 |
+| `POST` | `/api/plans/clear` | Clears saved plans from SQLite 3 |
+| `POST` | `/api/ai/copilot` | AI Energy Copilot natural language queries |
+| `POST` | `/api/ai/forecast-ml` | Physical PV & wind aero-turbine regression inference |
+| `POST` | `/api/ai/battery-analysis` | Arrhenius battery health & C-rate stress analysis |
+
+---
+
+## 6. Setup & Execution Instructions
 
 ### Prerequisites
-- Node.js version 18+ (Node v20 or v24 recommended)
-- npm or pnpm
+- **Node.js**: v18+ (Node.js v20 or v24 recommended)
+- **Python**: 3.11+ (Python 3.11 recommended)
 
-### Installation
+### Step 1: Install Frontend Dependencies
 ```bash
-# Clone or navigate to the directory
-cd chargesmart
-
-# Install dependencies
 npm install
 ```
 
-### Running the Development Server
+### Step 2: Configure Environment Variables
+Copy `.env.example` to `.env`:
+```bash
+cp .env.example .env
+```
+*(All core features work immediately out-of-the-box without requiring paid API keys!)*
+
+### Step 3: Run Unit & Integration Tests
+```bash
+# Run Frontend & Service calculation tests (17 unit test scenarios)
+npm test
+
+# Run Backend Python, Owner Authentication, & SQLite persistence tests
+python tests/test_backend.py
+```
+
+### Step 4: Start the Backend Server
+```bash
+python backend/server.py
+```
+*Backend runs on `http://localhost:8000` with SQLite persistence at `backend/chargesmart.db`.*
+
+### Step 5: Start the Frontend Application
 ```bash
 npm run dev
 ```
-The application will launch at `http://localhost:3000`.
+*Frontend opens at `http://localhost:3000`.*
 
-### Running Unit Tests
-```bash
-npm test
-```
-Executes the native test suite verifying all 11 test scenarios.
-
-### Building for Production
+### Step 6: Production Build & Preview
 ```bash
 npm run build
+npm run preview
 ```
-Generates optimized code-split bundles inside `dist/`.
 
 ---
 
-## 6. Unit Testing Coverage
+## 7. Data Accuracy & Transparency Principles
 
-The test suite in `tests/recommendationEngine.test.mjs` verifies:
-1. **Case 1**: Battery charging from 20% to 80% (energy required, wall draw, duration).
-2. **Case 2**: Invalid battery percentages (negative values, >100%).
-3. **Case 3**: Current battery charge already above or equal to desired charge.
-4. **Case 4**: Charging power limited by vehicle onboard charger rating.
-5. **Case 5**: Charging power limited by station power rating.
-6. **Case 6**: Budget set too low (flags infeasibility and returns practical advice).
-7. **Case 7**: Departure deadline that cannot be met (flags infeasibility and suggests target reduction or DC fast charger).
-8. **Case 8**: Missing / zero renewable energy data handles gracefully without NaN.
-9. **Case 9**: Wall-to-battery electricity cost consistency (efficiency losses + auxiliary fees).
-10. **Case 10**: Tight deadline scenario where charging immediately is the only feasible option.
-11. **Internal Consistency**: ISO lifecycle emissions calculation and petrol displacement equivalence.
-
----
-
-## 7. Data Transparency & Honest Fallbacks
-
-- **Simulated Grid Data**: Grid profiles, solar/wind curves, and station listings are clearly labeled as simulated datasets modeled after real Bangalore/DSU distribution nodes.
-- **No Fabricated Telemetry**: ChargeSmart does not present invented live vehicle sensors as real data.
-- **Constraint Integrity**: If a user's departure deadline is too tight or budget is insufficient, the system flags the schedule as infeasible and provides practical suggestions rather than displaying an invalid schedule.
-
----
-
-## 8. Credits & Acknowledgements
-
-- **Developed by**: GreenByte Technologies
-- **Presented at**: DSU Ideathon 2026
-- **Domain**: Clean Mobility & EV Infrastructure
-- **Brand Tagline**: *"Smarter Charging. A Cleaner Tomorrow."*
+1. **Never Invented Data**: Coordinates, addresses, and connectors originate from verified station owners or OpenStreetMap. If live plug status is not available from an operator feed, ChargeSmart displays `"Live availability not provided by operator"`.
+2. **Never Fabricated Telemetry**: Grid solar irradiance and wind measurements are computed from physical models and Open-Meteo radiation feeds.
+3. **Transparent Price Labels**: Station tariffs are explicitly marked as `Verified Station Price` or `User Entered Estimate`.
+4. **No Mandatory Login**: All EV user features are publicly accessible without authentication.
+5. **No Blind Fallbacks**: If location access is denied, users are prompted to search manually rather than silently being teleported to a random location.

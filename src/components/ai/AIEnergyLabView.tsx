@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService, MLForecastResult, MLBatteryAnalysis } from '../../services/apiService';
+import { RenewableCore3D } from '../3d/RenewableCore3D';
 import {
   ResponsiveContainer,
   BarChart,

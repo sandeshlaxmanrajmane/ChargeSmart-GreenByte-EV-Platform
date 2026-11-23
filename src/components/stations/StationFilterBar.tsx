@@ -1,6 +1,6 @@
 import React from 'react';
-import { Search, Filter, ShieldCheck, ArrowUpDown } from 'lucide-react';
-import { StationFilterParams } from '../../services/stationService';
+import { Search, Filter, ShieldCheck, ArrowUpDown, Zap, Building2 } from 'lucide-react';
+import { StationFilterParams, stationService } from '../../services/stationService';
 
 interface StationFilterBarProps {
   filters: StationFilterParams;
@@ -13,6 +13,8 @@ export const StationFilterBar: React.FC<StationFilterBarProps> = ({
   onFilterChange,
   currencySymbol,
 }) => {
+  const operators = stationService.getUniqueOperators();
+
   return (
     <div className="bg-white rounded-3xl p-5 shadow-card border border-slate-200 mb-6 space-y-4">
       {/* Top Search & Verified Toggle */}
@@ -22,7 +24,7 @@ export const StationFilterBar: React.FC<StationFilterBarProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search by station name, street, neighborhood, or city..."
+            placeholder="Search within loaded stations by name, street, operator, or city..."
             value={filters.searchQuery || ''}
             onChange={(e) => onFilterChange({ searchQuery: e.target.value })}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50"
@@ -39,11 +41,11 @@ export const StationFilterBar: React.FC<StationFilterBarProps> = ({
           }`}
         >
           <ShieldCheck className="w-4 h-4" />
-          <span>Verified 70%+ Renewable Only</span>
+          <span>70%+ Clean Mix Only</span>
         </button>
       </div>
 
-      {/* Filter Chips & Sorting */}
+      {/* Filter Chips & Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 text-xs">
         {/* Connector Filter */}
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -63,21 +65,41 @@ export const StationFilterBar: React.FC<StationFilterBarProps> = ({
           ))}
         </div>
 
-        {/* Sort By Dropdown */}
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400 font-semibold text-[11px] uppercase flex items-center gap-1">
-            <ArrowUpDown className="w-3 h-3" /> Sort:
-          </span>
-          <select
-            value={filters.sortBy || 'distance'}
-            onChange={(e) => onFilterChange({ sortBy: e.target.value as any })}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          >
-            <option value="distance">Nearest Distance</option>
-            <option value="renewable">Highest Clean Energy %</option>
-            <option value="price">Lowest Price / kWh</option>
-            <option value="power">Fastest Power (kW)</option>
-          </select>
+        {/* Min Power and Sort By Dropdown */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Min Power filter */}
+          <div className="flex items-center gap-1">
+            <span className="text-slate-400 font-semibold text-[11px] uppercase flex items-center gap-1">
+              <Zap className="w-3 h-3 text-amber-500" /> Min:
+            </span>
+            <select
+              value={filters.minPowerKw || 0}
+              onChange={(e) => onFilterChange({ minPowerKw: Number(e.target.value) })}
+              className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value={0}>Any kW</option>
+              <option value={22}>≥ 22 kW</option>
+              <option value={50}>≥ 50 kW (DC Fast)</option>
+              <option value={100}>≥ 100 kW (Ultra-Fast)</option>
+            </select>
+          </div>
+
+          {/* Sort By Dropdown */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400 font-semibold text-[11px] uppercase flex items-center gap-1">
+              <ArrowUpDown className="w-3 h-3" /> Sort:
+            </span>
+            <select
+              value={filters.sortBy || 'distance'}
+              onChange={(e) => onFilterChange({ sortBy: e.target.value as any })}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="distance">Nearest Distance</option>
+              <option value="power">Fastest Power (kW)</option>
+              <option value="price">Lowest Price / kWh</option>
+              <option value="renewable">Highest Clean Energy %</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>

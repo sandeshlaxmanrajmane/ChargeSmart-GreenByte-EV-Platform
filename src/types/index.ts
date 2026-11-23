@@ -67,7 +67,6 @@ export interface ChargingWindowCandidate {
   withinBudget: boolean;
   isFeasible: boolean;
   infeasibilityReasons: string[];
-  // Normalized component scores (0 to 1, higher is better)
   costScore: number;
   renewableScore: number;
   emissionsScore: number;
@@ -113,36 +112,160 @@ export interface RecommendationResponse {
   };
 }
 
+export interface ChargerBay {
+  id: string;
+  station_id?: string;
+  stationId?: string;
+  charger_identifier: string;
+  connector_type: string;
+  charging_type: 'DC Fast' | 'AC Level 2' | string;
+  power_kw: number;
+  total_connectors: number;
+  price_per_kwh: number;
+  currency: string;
+  additional_fees?: number;
+  availability_status: 'Available' | 'Occupied' | 'Out of Service' | 'Maintenance' | 'Offline';
+  operating_status: 'Online' | 'Degraded' | 'Offline';
+  last_status_updated: string;
+}
+
 export interface ChargingStation {
   id: string;
   name: string;
   operator: string;
   address: string;
   city: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
   latitude: number;
   longitude: number;
   distanceKm: number;
   totalPlugs: number;
   availablePlugs: number;
+  occupiedPlugs?: number;
+  outOfServicePlugs?: number;
   connectors: {
-    type: 'CCS2' | 'Type 2' | 'CHAdeMO' | 'Bharat AC001' | 'GB/T';
+    type: 'CCS2' | 'Type 2' | 'CHAdeMO' | 'Bharat AC001' | 'GB/T' | 'Tesla Supercharger' | string;
     powerKw: number;
     available: number;
     total: number;
   }[];
+  chargers?: ChargerBay[];
   maxPowerKw: number;
   pricePerKwh: number;
+  isVerifiedPrice?: boolean;
+  tariffDetails?: string;
   currency: string;
   renewableInfo: {
-    source: 'Rooftop Solar Canopy' | 'Wind PPA' | '100% Certified Green Grid' | 'Standard Grid Mix';
+    source: 'Rooftop Solar Canopy' | 'Wind PPA' | '100% Certified Green Grid' | 'Regional Grid Mix' | 'Standard Grid Mix' | string;
     verified: boolean;
     greenSharePercent: number;
     lifecycleRating: 'A+' | 'A' | 'B' | 'C';
   };
   amenities: string[];
-  status: 'available' | 'busy' | 'offline';
+  status: 'available' | 'busy' | 'offline' | 'unknown';
+  liveStatus?: 'available' | 'occupied' | 'out_of_service' | 'unknown' | 'operator_reported' | 'live';
+  isLiveStatusAvailable?: boolean;
+  dataProvider?: string;
+  lastUpdated?: string;
   isVerified: boolean;
   openingHours: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  description?: string;
+  ownerId?: string;
+}
+
+export interface StationOwner {
+  id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  business_name: string;
+  business_address?: string;
+  created_at: string;
+}
+
+export interface OwnerStation {
+  id: string;
+  owner_id: string;
+  name: string;
+  description?: string;
+  address: string;
+  city: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  latitude: number;
+  longitude: number;
+  operating_hours: string;
+  facilities: string[];
+  contact_phone?: string;
+  contact_email?: string;
+  network_operator: string;
+  is_public: boolean;
+  photo_url?: string;
+  chargers: ChargerBay[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OwnerAnalytics {
+  totalStations: number;
+  totalChargers: number;
+  availableChargers: number;
+  occupiedChargers: number;
+  offlineChargers: number;
+  utilizationRatePercent: number;
+  recentActivity: {
+    id: number;
+    charger_id: string;
+    station_id: string;
+    charger_identifier: string;
+    station_name: string;
+    old_status: string;
+    new_status: string;
+    updated_at: string;
+    notes?: string;
+  }[];
+}
+
+export interface RouteResult {
+  distanceKm: number;
+  durationMinutes: number;
+  durationFormatted: string;
+  coordinates: [number, number][];
+  isSimulatedRoute: boolean;
+  provider: string;
+}
+
+export interface RouteChargingStop {
+  station: ChargingStation;
+  distanceFromStartKm: number;
+  estimatedArrivalSocPercent: number;
+  targetDepartureSocPercent: number;
+  energyNeededKwh: number;
+  chargingDurationMinutes: number;
+  estimatedCost: number;
+}
+
+export interface JourneyPlan {
+  id: string;
+  createdAt: string;
+  startLocation: { name: string; latitude: number; longitude: number };
+  destLocation: { name: string; latitude: number; longitude: number };
+  vehicleName: string;
+  batteryCapacityKwh: number;
+  vehicleRangeKm: number;
+  currentBatteryPercent: number;
+  totalDistanceKm: number;
+  totalDriveTimeFormatted: string;
+  estimatedEnergyKwh: number;
+  requiresChargingStop: boolean;
+  chargingStops: RouteChargingStop[];
+  totalJourneyCost: number;
+  totalChargingTimeMinutes: number;
 }
 
 export interface SavedPlan {

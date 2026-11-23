@@ -12,20 +12,24 @@ import { StationFilterBar } from '../components/stations/StationFilterBar';
 import { StationDetailModal } from '../components/stations/StationDetailModal';
 import { LocationPermissionBanner } from '../components/stations/LocationPermissionBanner';
 import { showToast } from '../components/common/Toast';
-import { MapPin, Info, ShieldCheck, Sparkles, Navigation, RotateCw } from 'lucide-react';
+import { MapPin, Info, ShieldCheck, Sparkles, Navigation, RotateCw, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 interface StationsPageProps {
   currencySymbol: string;
   setActiveTab: (tab: string) => void;
+  onSelectStationForPlan?: (station: ChargingStation) => void;
 }
 
 export const StationsPage: React.FC<StationsPageProps> = ({
   currencySymbol,
   setActiveTab,
+  onSelectStationForPlan,
 }) => {
+  const [radiusKm, setRadiusKm] = useState<number>(25);
   const [filters, setFilters] = useState<StationFilterParams>({
     searchQuery: '',
     connectorType: 'ALL',
+    minPowerKw: 0,
     onlyVerifiedRenewable: false,
     sortBy: 'distance',
   });
@@ -44,104 +48,129 @@ export const StationsPage: React.FC<StationsPageProps> = ({
   const [isLoadingStations, setIsLoadingStations] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = locationService.subscribe((loc, status) => {
+    // Initial sync with backend to fetch verified owner stations
+    stationService.syncWithBackend();
+
+    const unsubscribeLocation = locationService.subscribe((loc, status) => {
       setUserLocation(loc);
       setLocationStatus(status);
       if (loc) {
-        // Recalculate distances for existing stations
         const updated = locationService.recalculateDistances(stationService.getAllStations(), loc);
         setStations(updated);
       }
     });
 
-    // Auto-prompt location if idle or prompt
-    if (locationStatus === 'idle' || locationStatus === 'prompt') {
-      handleRequestLocation();
-    }
+    const unsubscribeStations = stationService.subscribe(() => {
+      const all = stationService.getAllStations();
+      if (userLocation) {
+        setStations(locationService.recalculateDistances(all, userLocation));
+      } else {
+        setStations(all);
+      }
+    });
 
     return () => {
-      unsubscribe();
+      unsubscribeLocation();
+      unsubscribeStations();
     };
-  }, []);
+  }, [userLocation]);
 
-  const handleRequestLocation = async () => {
+  const fetchStationsForCoordinates = async (lat: number, lon: number, radiusM: number, locationName: string) => {
     setIsLoadingStations(true);
     try {
-      showToast('info', 'Requesting Location', 'Acquiring GPS satellite position from your device...');
-      const loc = await locationService.requestCurrentLocation();
-      setUserLocation(loc);
-      setLocationStatus('granted');
+      showToast('info', 'Searching Stations', `Querying charging stations near ${locationName}...`);
+      const realStations = await locationService.fetchRealNearbyStations(lat, lon, radiusM);
 
-      // Fetch real OSM stations near user's GPS coordinates
-      const realOsmStations = await locationService.fetchRealNearbyStations(
-        loc.latitude,
-        loc.longitude,
-        25000
-      );
-
-      let allStations: ChargingStation[] = [];
-      if (realOsmStations.length > 0) {
-        allStations = realOsmStations;
+      if (realStations.length > 0) {
+        stationService.setStations(realStations);
+        setStations(realStations);
+        setSelectedStation(realStations[0]);
         showToast(
           'success',
-          'Live Stations Located',
-          `Discovered ${realOsmStations.length} real EV charging stations near ${loc.city || 'you'}!`
+          'Stations Discovered',
+          `Found ${realStations.length} EV charging stations within ${radiusM / 1000}km of ${locationName}!`
         );
       } else {
-        // Fallback to demo stations with real recalculated distances
-        allStations = locationService.recalculateDistances(stationService.getAllStations(), loc);
+        const updated = locationService.recalculateDistances(stationService.getAllStations(), {
+          latitude: lat,
+          longitude: lon,
+          timestamp: Date.now(),
+          source: 'manual',
+        });
+        setStations(updated);
         showToast(
-          'success',
-          'GPS Location Acquired',
-          `Positioned at ${loc.addressLabel || 'your area'}. Nearest charger is ${allStations[0]?.distanceKm} km away.`
+          'info',
+          'Search Results',
+          `No charging stations were mapped in this radius. Showing regional stations.`
         );
       }
-
-      setStations(allStations);
-      if (allStations.length > 0) {
-        setSelectedStation(allStations[0]);
-      }
     } catch (err: any) {
-      showToast('warning', 'Location Restricted', err.message || 'Please enable GPS permission.');
+      showToast('warning', 'Query Warning', 'Could not retrieve live stations from network. Showing cached stations.');
     } finally {
       setIsLoadingStations(false);
     }
   };
 
+  const handleRequestLocation = async () => {
+    setIsLoadingStations(true);
+    try {
+      showToast('info', 'Acquiring GPS', 'Requesting satellite coordinates from your device...');
+      const loc = await locationService.requestCurrentLocation();
+      setUserLocation(loc);
+      setLocationStatus('granted');
+
+      await fetchStationsForCoordinates(
+        loc.latitude,
+        loc.longitude,
+        radiusKm * 1000,
+        loc.city || loc.addressLabel || 'your location'
+      );
+    } catch (err: any) {
+      showToast('warning', 'Location Not Available', err.message || 'Please enable GPS permission or search manually.');
+    } finally {
+      setIsLoadingStations(false);
+    }
+  };
+
+  const handleSelectManualLocation = async (manualLoc: UserLocation) => {
+    setUserLocation(manualLoc);
+    await fetchStationsForCoordinates(
+      manualLoc.latitude,
+      manualLoc.longitude,
+      radiusKm * 1000,
+      manualLoc.city || manualLoc.addressLabel || 'selected area'
+    );
+  };
+
+  const handleChangeRadius = (newRadiusKm: number) => {
+    setRadiusKm(newRadiusKm);
+    if (userLocation) {
+      fetchStationsForCoordinates(
+        userLocation.latitude,
+        userLocation.longitude,
+        newRadiusKm * 1000,
+        userLocation.city || 'your area'
+      );
+    }
+  };
+
+  const handleRefresh = () => {
+    if (userLocation) {
+      fetchStationsForCoordinates(
+        userLocation.latitude,
+        userLocation.longitude,
+        radiusKm * 1000,
+        userLocation.city || 'your location'
+      );
+    } else {
+      handleRequestLocation();
+    }
+  };
+
   // Filter stations based on current state
-  let filteredStations = [...stations];
-
-  if (filters.searchQuery && filters.searchQuery.trim() !== '') {
-    const q = filters.searchQuery.toLowerCase();
-    filteredStations = filteredStations.filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) ||
-        s.address.toLowerCase().includes(q) ||
-        s.operator.toLowerCase().includes(q) ||
-        s.city.toLowerCase().includes(q)
-    );
-  }
-
-  if (filters.connectorType && filters.connectorType !== 'ALL') {
-    filteredStations = filteredStations.filter((s) =>
-      s.connectors.some((c) => c.type === filters.connectorType && c.available > 0)
-    );
-  }
-
-  if (filters.onlyVerifiedRenewable) {
-    filteredStations = filteredStations.filter(
-      (s) => s.renewableInfo.verified && s.renewableInfo.greenSharePercent >= 70
-    );
-  }
-
-  // Sort
-  const sort = filters.sortBy || 'distance';
-  filteredStations.sort((a, b) => {
-    if (sort === 'distance') return a.distanceKm - b.distanceKm;
-    if (sort === 'price') return a.pricePerKwh - b.pricePerKwh;
-    if (sort === 'power') return b.maxPowerKw - a.maxPowerKw;
-    if (sort === 'renewable') return b.renewableInfo.greenSharePercent - a.renewableInfo.greenSharePercent;
-    return 0;
+  const filteredStations = stationService.filterStations({
+    ...filters,
+    maxDistanceKm: radiusKm,
   });
 
   const nearestStation = filteredStations.length > 0 ? filteredStations[0] : null;
@@ -152,6 +181,9 @@ export const StationsPage: React.FC<StationsPageProps> = ({
   };
 
   const handlePlanAtStation = (station: ChargingStation) => {
+    if (onSelectStationForPlan) {
+      onSelectStationForPlan(station);
+    }
     setActiveTab('planner');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -167,76 +199,107 @@ export const StationsPage: React.FC<StationsPageProps> = ({
             </span>
             <span className="text-xs text-slate-500 font-medium">
               {userLocation
-                ? `Active GPS Area: ${userLocation.city || 'Detected'}`
-                : 'Demo Region: Bengaluru EcoGrid'}
+                ? `${userLocation.source === 'gps' ? 'Live GPS Location' : 'Geocoded Search'}: ${userLocation.city || 'Detected'}`
+                : 'ChargeSmart Unified Network'}
             </span>
           </div>
           <h2 className="text-3xl font-black text-slate-900 tracking-tight mt-1">
             EV Charging Station Finder
           </h2>
           <p className="text-xs sm:text-sm text-slate-500">
-            Find fast DC and AC chargers with transparent, verified renewable energy supply badges.
+            Locate real public EV chargers globally with verified connectors, speeds, and clean energy provenance.
           </p>
         </div>
 
-        {/* Total found badge */}
-        <div className="bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-xl text-emerald-950 text-xs font-bold self-start sm:self-auto flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>{filteredStations.length} Stations Found</span>
+        {/* Global GPS / Refresh Action */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRequestLocation}
+            disabled={isLoadingStations}
+            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <Navigation className="w-3.5 h-3.5" />
+            <span>Use My Location</span>
+          </button>
+
+          <button
+            onClick={handleRefresh}
+            disabled={isLoadingStations}
+            className="p-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 transition-colors"
+            title="Refresh Station Data"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoadingStations ? 'animate-spin text-emerald-600' : ''}`} />
+          </button>
         </div>
       </div>
 
-      {/* Geolocation Permission Banner */}
+      {/* Location Permission & Manual Search Banner */}
       <LocationPermissionBanner
         status={locationStatus}
         userLocation={userLocation}
-        nearestStation={nearestStation}
+        nearestStation={
+          nearestStation
+            ? {
+                name: nearestStation.name,
+                distanceKm: nearestStation.distanceKm,
+                latitude: nearestStation.latitude,
+                longitude: nearestStation.longitude,
+              }
+            : null
+        }
         onRequestLocation={handleRequestLocation}
+        onSelectManualLocation={handleSelectManualLocation}
+        radiusKm={radiusKm}
+        onChangeRadius={handleChangeRadius}
         isLoadingStations={isLoadingStations}
       />
 
       {/* Filter Bar */}
       <StationFilterBar
         filters={filters}
-        onFilterChange={(newFilters) => setFilters((prev) => ({ ...prev, ...newFilters }))}
+        onFilterChange={(partial) => setFilters((prev) => ({ ...prev, ...partial }))}
         currencySymbol={currencySymbol}
       />
 
-      {/* Interactive Leaflet Map with Real User Pin */}
-      <StationMap
-        stations={filteredStations}
-        selectedStationId={selectedStation ? selectedStation.id : null}
-        onSelectStation={handleSelectStation}
-        currencySymbol={currencySymbol}
-        userLocation={userLocation}
-      />
+      {/* Interactive Map */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
+          <span className="flex items-center gap-1.5 font-bold text-slate-700">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            Interactive Station Map & Road Navigation
+          </span>
+          <span>Click any marker to inspect hardware specifications</span>
+        </div>
 
-      {/* Station List Cards */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-emerald-600" />
-            <span>
-              {userLocation ? 'Charging Hubs Sorted by Distance from You' : 'Available Charging Locations'} ({filteredStations.length})
-            </span>
+        <StationMap
+          stations={filteredStations}
+          selectedStationId={selectedStation?.id || null}
+          onSelectStation={handleSelectStation}
+          currencySymbol={currencySymbol}
+          userLocation={userLocation}
+        />
+      </div>
+
+      {/* Stations List View */}
+      <div className="space-y-4 pt-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-slate-900">
+            Nearby Charging Hubs ({filteredStations.length})
           </h3>
-
-          {userLocation && (
-            <span className="text-xs text-emerald-700 font-semibold font-mono">
-              GPS Position: {userLocation.latitude.toFixed(3)}°N, {userLocation.longitude.toFixed(3)}°E
-            </span>
-          )}
+          <span className="text-xs text-slate-400">
+            Sorted by: <strong className="text-slate-700 uppercase font-mono">{filters.sortBy || 'distance'}</strong>
+          </span>
         </div>
 
         <StationList
           stations={filteredStations}
-          selectedStationId={selectedStation ? selectedStation.id : null}
+          selectedStationId={selectedStation?.id || null}
           onSelectStation={handleSelectStation}
           currencySymbol={currencySymbol}
         />
       </div>
 
-      {/* Station Details Modal */}
+      {/* Station Detail Modal */}
       {modalStation && (
         <StationDetailModal
           station={modalStation}
